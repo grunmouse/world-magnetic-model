@@ -106,7 +106,7 @@ function decimalDate(date) {
 		 */
 		this.calculate = function (glat, glon, h, date) {
 			if (unnormalizedWMM === undefined) {
-				throw new Error("Модель не сконфигурирована.")
+				throw new Error("Модель не сконфигурирована.");
 			}
 			if (glat === undefined || glon === undefined) {
 				throw new Error("Не переданы координаты.");
@@ -135,22 +135,15 @@ function decimalDate(date) {
 				crlon = Math.cos(rlon),
 				crlat = Math.cos(rlat),
 				/*
-					@var br, bp, bt - 
+					@var br, bp, bt - компоненты вектора магнитного поля относительно полярной системы координат
 				*/
 				br = 0,
 				bt = 0,
 				bp = 0,
 				
 				bpp = 0,
-				par,
 				parp,
-				D4,
-				m,
-				n,
-				fn = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-				fm = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
 				z = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-				pp = z.slice(),
 				p = Array.from({length:13}, ()=>(z.slice())),
 				dp = Array.from({length:13}, ()=>(z.slice())),
 				/*
@@ -165,9 +158,7 @@ function decimalDate(date) {
 				dip,
 				gv;
 
-			pp[0] = 1;
-			p[0][0] = 1;
-			
+
 			let {r, teta} = sphericalCoord(ellipsoid, rlon, rlat, alt);
 			let ct = Math.cos(teta);
 			let st = Math.sin(teta);
@@ -177,30 +168,36 @@ function decimalDate(date) {
 			let ca = Math.cos(al);
 			let sa = Math.sin(al);
 			
-			
-			
 			var sp = new Array(13), cp = new Array(13);
 			sp[0] = 0;
 			cp[0] = 1;
 			sp[1] = srlon;
 			cp[1] = crlon;
-			for (m = 2; m <= maxord; m++) {
+			for (let m = 2; m <= maxord; m++) {
 				sp[m] = srlon * cp[m - 1] + crlon * sp[m - 1];
 				cp[m] = crlon * cp[m - 1] - srlon * sp[m - 1];
 			}
+			
+			var pp = new Array(13);
+			pp[0] = 1;
+			pp[1] = 1;
+			for(let n=2; n<=maxord; ++n){
+				pp[n] = ct * pp[n - 1] - k[1][n] * pp[n - 2];
+			}
+			
+			p[0][0] = 1;
+			
 
 			let aor = re / r;
 			let ar = aor * aor;
 
-			const ftc = (m, n)=>(c[m][n] + dt * cd[m][n]);
-			const ffm = (m)=>(m);
-			const ffn = (n)=>(n)=>(n === 0 ? 0 : n+1);
+			const ftc = (m, n, dt)=>(c[m][n] + dt * cd[m][n]);
 
-			for (n = 1; n <= maxord; n++) {
+			for (let n = 1; n <= maxord; n++) {
 				ar = ar * aor;
 				//ar = aor ** (n+2); //Совпадает почти точно
-				for (m = 0, D4 = (n + m + 1); D4 > 0; D4--, m++) {
-
+				for (let m = 0, D4 = (n + m + 1); D4 > 0; D4--, m++) {
+					console.log(n, m, D4);
 					if (n === m) {
 						p[m][n] = st * p[m - 1][n - 1];
 						dp[m][n] = st * dp[m - 1][n - 1] + ct *	p[m - 1][n - 1];
@@ -220,31 +217,25 @@ function decimalDate(date) {
 						dp[m][n] = ct * dp[m][n - 1] - st * p[m][n - 1] - k[m][n] * dtail;
 					}
 
-					par = ar * p[m][n];
-					let tcmn = ftc(m, n);
+					let par = ar * p[m][n];
+					let tcmn = ftc(m, n, dt);
 					let temp1, temp2;
 					if (m === 0) {
 						temp1 = tcmn * cp[m];
 						temp2 = tcmn * sp[m];
 					} 
 					else {
-						let tcnm1 = ftc(n, m-1);
+						let tcnm1 = ftc(n, m-1, dt);
 						temp1 = tcmn * cp[m] + tcnm1 * sp[m];
 						temp2 = tcmn * sp[m] - tcnm1 * cp[m];
 					}
 					bt = bt - ar * temp1 * dp[m][n];
-					bp += (fm[m] * temp2 * par);
-					br += (fn[n] * temp1 * par);
+					bp += (m * temp2 * par);
+					br += ((n+1) * temp1 * par);
 
 					if (st === 0 && m === 1) {
-						if (n === 1) {
-							pp[n] = pp[n - 1];
-						} 
-						else {
-							pp[n] = ct * pp[n - 1] - k[m][n] * pp[n - 2];
-						}
-						parp = ar * pp[n];
-						bpp += (fm[m] * temp2 * parp);
+						let parp = ar * pp[n];
+						bpp += (m * temp2 * parp);
 					}
 				}
 			}
