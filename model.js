@@ -134,19 +134,13 @@ function decimalDate(date) {
 				srlat = Math.sin(rlat),
 				crlon = Math.cos(rlon),
 				crlat = Math.cos(rlat),
-				
-				//srlat2 = srlat **2,
-				//crlat2 = crlat **2,
-				ct,
-				st,
-				r,
-				ca,
-				sa,
-				aor,
-				ar,
+				/*
+					@var br, bp, bt - 
+				*/
 				br = 0,
 				bt = 0,
 				bp = 0,
+				
 				bpp = 0,
 				par,
 				parp,
@@ -174,30 +168,14 @@ function decimalDate(date) {
 			pp[0] = 1;
 			p[0][0] = 1;
 			
-			/* CONVERT FROM GEODETIC COORDS. TO SPHERICAL COORDS. */
-			{
-				let speric = sphericalCoord(ellipsoid, rlon, rlat, alt);
-
-				/**
-				 * @var ct, st - косинус и синус тета
-				 */
-	
-				ct = Math.cos(speric.teta);
-				st = Math.sin(speric.teta);
-				r = speric.r;
-				
-				let al = rlat - (Math.PI/2-speric.teta); // Угол между системами координат (с учётом различия направления отсчёта)
-				/**
-				 * @var ca, sa - косинус и синус ЧЕГО???
-				 */
-				//ca = (alt + d) / r;
-				//sa = c2 * crlat * srlat / (r * d);
-				
-				ca = Math.cos(al);
-				sa = Math.sin(al);
-				
-				//console.log(Math.atan(sa, ca) - ((Math.PI/2-teta) - rlat));
-			}
+			let {r, teta} = sphericalCoord(ellipsoid, rlon, rlat, alt);
+			let ct = Math.cos(teta);
+			let st = Math.sin(teta);
+			
+			let al = rlat - (Math.PI/2-teta); // Угол между системами координат (с учётом различия направления отсчёта)
+			
+			let ca = Math.cos(al);
+			let sa = Math.sin(al);
 			
 			
 			
@@ -211,10 +189,12 @@ function decimalDate(date) {
 				cp[m] = crlon * cp[m - 1] - srlon * sp[m - 1];
 			}
 
-			aor = re / r;
-			ar = aor * aor;
+			let aor = re / r;
+			let ar = aor * aor;
 
 			const ftc = (m, n)=>(c[m][n] + dt * cd[m][n]);
+			const ffm = (m)=>(m);
+			const ffn = (n)=>(n)=>(n === 0 ? 0 : n+1);
 
 			for (n = 1; n <= maxord; n++) {
 				ar = ar * aor;
@@ -275,8 +255,8 @@ function decimalDate(date) {
 			by = bp;
 			bz = bt * sa - br * ca;
 
-			bh = Math.sqrt(bx**2 + by**2); /* горизонтальная интенсивность */
-			ti = Math.sqrt(bh**2 + bz**2); /* полная интенсивность */
+			bh = Math.hypot(bx, by); /* горизонтальная интенсивность */
+			ti = Math.hypot(bh, bz); /* полная интенсивность */
 			var rDec = Math.atan2(by, bx); /* склонение (деклинация) */
 			var rInc = Math.atan2(bz, bh); /* наклонение (инклинация) */
 			dec = rad2deg(rDec);
@@ -318,7 +298,9 @@ function decimalDate(date) {
 				"X": bx,
 				"Y": by,
 				"Z": bz,
-				"F": ti				
+				"F": ti	,
+				rDec,
+				rInc
 			};
 		};
 	}
