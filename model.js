@@ -133,26 +133,7 @@ function decimalDate(date) {
 				srlon = Math.sin(rlon),
 				srlat = Math.sin(rlat),
 				crlon = Math.cos(rlon),
-				crlat = Math.cos(rlat),
-				/*
-					@var br, bp, bt - компоненты вектора магнитного поля относительно полярной системы координат
-				*/
-				br = 0,
-				bt = 0,
-				bp = 0,
-				
-				bpp = 0, //Отдельный расчёт bpp для st===0
-				/*
-					@var bx, by, bz - компоненты вектора магнитного поля
-				*/
-				bx,
-				by,
-				bz,
-				bh,
-				ti,
-				dec,
-				dip,
-				gv;
+				crlat = Math.cos(rlat);
 
 
 			let {r, teta} = sphericalCoord(ellipsoid, rlon, rlat, alt);
@@ -164,12 +145,15 @@ function decimalDate(date) {
 			let ca = Math.cos(al);
 			let sa = Math.sin(al);
 			
+			/* 
+			Подготовка коэффициентов
+			*/
 			var sp = [], cp = [];
 			sp[0] = 0;
 			cp[0] = 1;
 			sp[1] = srlon;
 			cp[1] = crlon;
-			for (let m = 2; m <= maxord; m++) {
+			for (let m = 2; m <= maxord; ++m) {
 				sp[m] = srlon * cp[m - 1] + crlon * sp[m - 1];
 				cp[m] = crlon * cp[m - 1] - srlon * sp[m - 1];
 			}
@@ -177,7 +161,7 @@ function decimalDate(date) {
 			var pp = [];
 			pp[0] = 1;
 			pp[1] = 1;
-			for(let n=2; n<=maxord; ++n){
+			for(let n = 2; n <= maxord; ++n){
 				pp[n] = ct * pp[n - 1] - k[1][n] * pp[n - 2];
 			}
 			
@@ -208,9 +192,21 @@ function decimalDate(date) {
 				}
 			}
 			
-
-			const ftc = (m, n, dt)=>(c[m][n] + dt * cd[m][n]);
+			/**
+			 * Функция от времени
+			 */
+			const ftc = (m, n, dt)=>(n<0 ? 0 : (c[m][n] + dt * cd[m][n]));
 			
+
+			/*
+				@var br, bp, bt - компоненты вектора магнитного поля относительно полярной системы координат
+			*/
+			let br = 0,
+				bt = 0,
+				bp = 0,
+				
+				bpp = 0; //Отдельный расчёт bpp для st===0
+				
 			let aor = re / r;
 			let ar = aor * aor;
 			for (let n = 1; n <= maxord; ++n) {
@@ -219,16 +215,10 @@ function decimalDate(date) {
 				for (let m = 0; m <=n; ++m) {
 					let par = ar * p[m][n];
 					let tcmn = ftc(m, n, dt);
-					let temp1, temp2;
-					if (m === 0) {
-						temp1 = tcmn * cp[m];
-						temp2 = tcmn * sp[m];
-					} 
-					else {
-						let tcnm1 = ftc(n, m-1, dt);
-						temp1 = tcmn * cp[m] + tcnm1 * sp[m];
-						temp2 = tcmn * sp[m] - tcnm1 * cp[m];
-					}
+					let tcnm1 = ftc(n, m-1, dt);
+					let temp1 = tcmn * cp[m] + tcnm1 * sp[m];
+					let temp2 = tcmn * sp[m] - tcnm1 * cp[m];
+					
 					bt = bt - ar * temp1 * dp[m][n];
 					bp += (m * temp2 * par);
 					br += ((n+1) * temp1 * par);
@@ -242,17 +232,22 @@ function decimalDate(date) {
 
 			bp = (st === 0 ? bpp : bp / st);
 			
-			bx = -bt * ca - br * sa;
-			by = bp;
-			bz = bt * sa - br * ca;
+			//Поворачиваем вектор обратно
+			/*
+				@var bx, by, bz - компоненты вектора магнитного поля
+			*/			
+			let bx = -bt * ca - br * sa;
+			let by = bp;
+			let bz = bt * sa - br * ca;
 
-			bh = Math.hypot(bx, by); /* горизонтальная интенсивность */
-			ti = Math.hypot(bh, bz); /* полная интенсивность */
-			var rDec = Math.atan2(by, bx); /* склонение (деклинация) */
-			var rInc = Math.atan2(bz, bh); /* наклонение (инклинация) */
-			dec = rad2deg(rDec);
-			dip = rad2deg(rInc);
+			let bh = Math.hypot(bx, by); /* горизонтальная интенсивность */
+			let ti = Math.hypot(bh, bz); /* полная интенсивность */
+			let rDec = Math.atan2(by, bx); /* склонение (деклинация) */
+			let rInc = Math.atan2(bz, bh); /* наклонение (инклинация) */
+			let dec = rad2deg(rDec);
+			let dip = rad2deg(rInc);
 
+			let gv;
 			if (Math.abs(glat) >= 55) {
 				if (glat > 0){
 					gv = dec - glon;
