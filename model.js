@@ -11,6 +11,41 @@ function deg2rad(deg) {
 	return deg * (Math.PI / 180);
 }
 
+function sphericalCoord(ellipsoid, rlon, rlat, alt){
+	let a = ellipsoid.a, b = ellipsoid.b;
+	
+	let srlat = Math.sin(rlat);
+	let crlat = Math.cos(rlat);
+	let srlon = Math.sin(rlon);
+	let crlon = Math.cos(rlon);
+	
+	let srlat2 = srlat **2;
+	let crlat2 = crlat **2;
+
+	let a2 = a ** 2;
+	let b2 = b ** 2;
+	let c2 = a2 - b2; /* квадрат полуфокусного */
+	//let e2 = c2/a2; /* квадрат эксцентриситета */
+	//let a4 = a2 ** 2;
+	//let b4 = b2 ** 2;
+	//let c4 = a4 - b4;		
+	let d = Math.sqrt(a2 * crlat2 + b2 * srlat2);
+	
+	let N = a2/d;
+	let X = (N + alt)*crlat*crlon;
+	let Y = (N + alt)*crlat*srlon;
+	let Z = (b2/a2*N + alt)*srlat;
+	
+	let teta = Math.atan2(Math.hypot(X,Y), Z);
+	let phi = Math.atan2(X, Y);
+	let r = Math.hypot(X, Y, Z);
+	return {
+		teta,
+		phi,
+		r
+	};
+}
+
 /**
  * возвращает дату в годах и долях года
  * Странное решение, надо переделать
@@ -90,14 +125,8 @@ function decimalDate(date) {
 				a = ellipsoid.a,
 				b = ellipsoid.b,   
 				re = ellipsoid.re,
-				a2 = a ** 2,
-				b2 = b ** 2,
-				c2 = a2 - b2, /* квадрат полуфокусного */
-				a4 = a2 ** 2,
-				b4 = b2 ** 2,
-				c4 = a4 - b4,								
 				alt = h || 0,
-				dt = date - epoch,
+				dt = date - epoch, /* Время от начала эпохи в годах*/
 				
 				rlat = deg2rad(glat),
 				rlon = deg2rad(glon),
@@ -106,16 +135,11 @@ function decimalDate(date) {
 				crlon = Math.cos(rlon),
 				crlat = Math.cos(rlat),
 				
-				srlat2 = srlat **2,
-				crlat2 = crlat **2,
-				q,
-				q1,
-				q2,
+				//srlat2 = srlat **2,
+				//crlat2 = crlat **2,
 				ct,
 				st,
-				r2,
 				r,
-				d,
 				ca,
 				sa,
 				aor,
@@ -150,21 +174,32 @@ function decimalDate(date) {
 			pp[0] = 1;
 			p[0][0] = 1;
 			
-			q = Math.sqrt(a2 - c2 * srlat2);
-			q1 = alt * q;
-			q2 = ((q1 + a2) / (q1 + b2)) ** 2;
+			/* CONVERT FROM GEODETIC COORDS. TO SPHERICAL COORDS. */
+			{
+				let speric = sphericalCoord(ellipsoid, rlon, rlat, alt);
+
+				/**
+				 * @var ct, st - косинус и синус тета
+				 */
+	
+				ct = Math.cos(speric.teta);
+				st = Math.sin(speric.teta);
+				r = speric.r;
+				
+				let al = rlat - (Math.PI/2-speric.teta); // Угол между системами координат (с учётом различия направления отсчёта)
+				/**
+				 * @var ca, sa - косинус и синус ЧЕГО???
+				 */
+				//ca = (alt + d) / r;
+				//sa = c2 * crlat * srlat / (r * d);
+				
+				ca = Math.cos(al);
+				sa = Math.sin(al);
+				
+				//console.log(Math.atan(sa, ca) - ((Math.PI/2-teta) - rlat));
+			}
 			
-			ct = srlat / Math.sqrt(q2 * crlat2 + srlat2);
-			st = Math.sqrt(1 - ct ** 2);
 			
-			r2 = alt**2 + 2 * q1 + (a4 - c4 * srlat2) / (q **2);
-			r = Math.sqrt(r2);
-			d = Math.sqrt(a2 * crlat2 + b2 * srlat2);
-			/**
-			 * @var ca, sa - косинус и синус ЧЕГО???
-			 */
-			ca = (alt + d) / r;
-			sa = c2 * crlat * srlat / (r * d);
 			
 			var sp = new Array(13), cp = new Array(13);
 			sp[0] = 0;
@@ -198,8 +233,6 @@ function decimalDate(date) {
 						let tail = p[m][n - 2];
 						let dtail = dp[m][n - 2];
 						if (m > n - 2) { 
-							//p[m][n - 2] = 0; 
-							//dp[m][n - 2] = 0; 
 							tail = 0;
 							dtail = 0;
 						}
