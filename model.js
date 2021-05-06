@@ -141,11 +141,7 @@ function decimalDate(date) {
 				bt = 0,
 				bp = 0,
 				
-				bpp = 0,
-				parp,
-				z = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-				p = Array.from({length:13}, ()=>(z.slice())),
-				dp = Array.from({length:13}, ()=>(z.slice())),
+				bpp = 0, //Отдельный расчёт bpp для st===0
 				/*
 					@var bx, by, bz - компоненты вектора магнитного поля
 				*/
@@ -168,7 +164,7 @@ function decimalDate(date) {
 			let ca = Math.cos(al);
 			let sa = Math.sin(al);
 			
-			var sp = new Array(13), cp = new Array(13);
+			var sp = [], cp = [];
 			sp[0] = 0;
 			cp[0] = 1;
 			sp[1] = srlon;
@@ -178,26 +174,19 @@ function decimalDate(date) {
 				cp[m] = crlon * cp[m - 1] - srlon * sp[m - 1];
 			}
 			
-			var pp = new Array(13);
+			var pp = [];
 			pp[0] = 1;
 			pp[1] = 1;
 			for(let n=2; n<=maxord; ++n){
 				pp[n] = ct * pp[n - 1] - k[1][n] * pp[n - 2];
 			}
 			
+			let p = Array.from({length:maxord+1}, ()=>([]));
+			let dp = Array.from({length:maxord+1}, ()=>([]));
 			p[0][0] = 1;
-			
-
-			let aor = re / r;
-			let ar = aor * aor;
-
-			const ftc = (m, n, dt)=>(c[m][n] + dt * cd[m][n]);
-
-			for (let n = 1; n <= maxord; n++) {
-				ar = ar * aor;
-				//ar = aor ** (n+2); //Совпадает почти точно
-				for (let m = 0, D4 = (n + m + 1); D4 > 0; D4--, m++) {
-					console.log(n, m, D4);
+			dp[0][0] = 0;
+			for (let n = 1; n <= maxord; ++n) {
+				for (let m = 0; m <=n; ++m) {
 					if (n === m) {
 						p[m][n] = st * p[m - 1][n - 1];
 						dp[m][n] = st * dp[m - 1][n - 1] + ct *	p[m - 1][n - 1];
@@ -216,7 +205,18 @@ function decimalDate(date) {
 						p[m][n] = ct * p[m][n - 1] - k[m][n] * tail;
 						dp[m][n] = ct * dp[m][n - 1] - st * p[m][n - 1] - k[m][n] * dtail;
 					}
+				}
+			}
+			
 
+			const ftc = (m, n, dt)=>(c[m][n] + dt * cd[m][n]);
+			
+			let aor = re / r;
+			let ar = aor * aor;
+			for (let n = 1; n <= maxord; ++n) {
+				ar = ar * aor;
+				//ar = aor ** (n+2); //Совпадает почти точно
+				for (let m = 0; m <=n; ++m) {
 					let par = ar * p[m][n];
 					let tcmn = ftc(m, n, dt);
 					let temp1, temp2;
