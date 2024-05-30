@@ -103,6 +103,32 @@ function decimalDate(date) {
 		 * @param glon : Number - долгота в градусах
 		 * @param h : Number - высота в километрах
 		 * @param date : (Date|Number) - дата или десятичная дата в годах
+		 *
+		 * @return {Object}
+		 * @property 
+		 * @property dec
+		 * @property declination: dec, - склонение в градусах
+		 * @property rDec,- склонение в радианах
+		 * @property dip
+		 * @property inclination: dip, - наклонение в градусах
+		 * @property rInc - наклонение в радианах
+		 * @property ti
+		 * @property F: ti	,
+		 * @property bh
+		 * @property H: bh,
+		 * @property bx
+		 * @property X: bx,
+		 * @property by
+		 * @property Y: by,
+		 * @property bz
+		 * @property Z: bz,
+		 * @property lat: glat, 
+		 * @property latitude: glat, - широта в градусах
+		 * @property lon: glon, 
+		 * @property longitude: glon, - долгота в градусах
+		 * @property gv
+		 * @property date
+		 * @property height: h,
 		 */
 		this.calculate = function (glat, glon, h, date) {
 			if (unnormalizedWMM === undefined) {
@@ -244,8 +270,8 @@ function decimalDate(date) {
 			let ti = Math.hypot(bh, bz); /* полная интенсивность */
 			let rDec = Math.atan2(by, bx); /* склонение (деклинация) */
 			let rInc = Math.atan2(bz, bh); /* наклонение (инклинация) */
-			let dec = rad2deg(rDec);
-			let dip = rad2deg(rInc);
+			let dec = rad2deg(rDec); /* склонение (деклинация) в градусах*/
+			let dip = rad2deg(rInc); /* наклонение (инклинация) в градусах */
 
 			let gv;
 			if (Math.abs(glat) >= 55) {
